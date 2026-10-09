@@ -1,0 +1,25 @@
+{
+ "name": "Circles dk",
+ "short_name": "Circles dk",
+ "lang": "it",
+ "description": "Circles per browser da PC con ingresso MIDI da tastiera esterna: suoni tu, basso e pad ti seguono.",
+ "start_url": "./index.html",
+ "scope": "./",
+ "display": "standalone",
+ "background_color": "#0f1420",
+ "theme_color": "#0f1420",
+ "icons": [
+  {
+   "src": "icon-192.png",
+   "sizes": "192x192",
+   "type": "image/png",
+   "purpose": "any maskable"
+  },
+  {
+   "src": "icon-512.png",
+   "sizes": "512x512",
+   "type": "image/png",
+   "purpose": "any maskable"
+  }
+ ]
+}
