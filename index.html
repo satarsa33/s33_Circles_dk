@@ -208,9 +208,9 @@ function hit(t,d,f,type,pk){
 function note(f,t,type,a,d,pk,wet,lp){
   const o=osc(type,f,t,a+d+.1),fl=ac.createBiquadFilter(),k=ac.createGain(),g=gain(wet);
   fl.type='lowpass';fl.frequency.value=lp;env(g,t,a,d,pk);o.connect(fl);fl.connect(k);k.connect(g);
-  live.push({o,k,t});o.onended=()=>{const j=live.findIndex(v=>v.o===o);if(j>=0)live.splice(j,1);};
+  live.push({o,k,t,b:curBus});o.onended=()=>{const j=live.findIndex(v=>v.o===o);if(j>=0)live.splice(j,1);};
 }
-function trk(o,k,t){live.push({o,k,t});o.onended=()=>{const j=live.findIndex(v=>v.o===o);if(j>=0)live.splice(j,1);};}
+function trk(o,k,t){live.push({o,k,t,b:curBus});o.onended=()=>{const j=live.findIndex(v=>v.o===o);if(j>=0)live.splice(j,1);};}
 function bus(t,a,d,pk,wet){const k=ac.createGain(),g=gain(wet);env(g,t,a,d,pk);k.connect(g);return k;}
 function fmv(f,mr,ix,md,t,a,d,pk,wet,lp){
   const dur=a+d+.1,k=bus(t,a,d,pk,wet),fl=ac.createBiquadFilter(),c=osc('sine',f,t,dur),m=osc('sine',f*mr,t,dur),mg=ac.createGain();
@@ -418,12 +418,13 @@ function stepLock(i,c,b,now){
   const q=now-b.ts;b.x=b.x0+b.vx*q;b.y=b.y0+b.vy*q;
   const r=Math.hypot(b.x,b.y);if(r>1){b.x/=r;b.y/=r;}
 }
+var quick=false;
 function padHit(c,fo,t,d,tm,p){
-  const f=fq(fo,48);
-  if(tm===0){note(f*.997,t,'triangle',1.2,d,.06,.9,650);note(f*1.003,t,'triangle',1.2,d,.06,.9,650);note(f,t,'sine',1.2,d,.06,.9,650);}
-  else if(tm===1){const g=f*2;note(g,t,'sine',1,d,.06,.9,2200);note(g*1.003,t,'sine',1.3,d,.04,.9,2800);note(g*2.002,t,'sine',1.5,d,.02,.9,3600);}
-  else if(tm===2)drone(fq(fo,36),t,2,Math.min(p*3.5,9),.08,.9);
-  else padVoice(f,t,tm,d,.5);
+  const f=fq(fo,48),q=quick?.3:1;
+  if(tm===0){note(f*.997,t,'triangle',1.2*q,d,.06,.9,650);note(f*1.003,t,'triangle',1.2*q,d,.06,.9,650);note(f,t,'sine',1.2*q,d,.06,.9,650);}
+  else if(tm===1){const g=f*2;note(g,t,'sine',1*q,d,.06,.9,2200);note(g*1.003,t,'sine',1.3*q,d,.04,.9,2800);note(g*2.002,t,'sine',1.5*q,d,.02,.9,3600);}
+  else if(tm===2)drone(fq(fo,36),t,2*q,Math.min(p*3.5,9),.08,.9);
+  else padVoice(f,t,tm,d,.5*q);
   recN(3,t,mn(tm===2?fq(fo,36):tm===1?f*2:f),1.2+d*.6,70);
 }
 var shpC={};
@@ -767,16 +768,36 @@ function mvoice(f,t,tm,va){
   return live.slice(a);
 }
 const barEnd=()=>{const L=16*60/bpm,n=Math.max(0,Math.floor((ac.currentTime-t0)/L));return t0+(n+1)*L;};
+ const CT=[[0,4,7],[0,3,7],[0,3,6],[0,4,8],[0,2,7],[0,5,7],[0,4,7,11],[0,4,7,10],[0,3,7,10],[0,3,6,10],[0,3,6,9],[0,4,7,9]];
+function chordRoot(act){
+  const bass=Math.min(...act)%12,pcs=[...new Set(act.map(n=>n%12))];
+  let best=bass,bc=1e9;
+  pcs.forEach(r=>{
+    const rel=new Set(pcs.map(p=>(p-r+12)%12));
+    CT.forEach(T=>{
+      let miss=0,extra=0;
+      T.forEach(x=>{if(!rel.has(x))miss++;});
+      rel.forEach(x=>{if(!T.includes(x))extra++;});
+      const cost=miss*3+extra*2+(r===bass?0:.6)+(T.length>3?.3:0);
+      if(cost<bc){bc=cost;best=r;}
+    });
+  });
+  return bc>4?bass:best;
+}
+function quiet(bus,tc){const now=ac.currentTime;live.forEach(e=>{if(e.b===bus){try{e.k.gain.setTargetAtTime(0,now,tc);}catch(x){}}});}
 function chordHit(d){
   const t=ac.currentTime+.01;
+  quiet(C[3].bus,.25);quiet(C[1].bus,.12);
+  quick=true;
   if(C[1].on){const r=d>=5?d-7:d;play(1,t,per(C[1]),r);}
   if(C[3].on){[0,2,4].forEach(k=>{let x=d+k;if(x>8)x-=7;play(3,t,per(C[3]),x);});}
+  quick=false;
 }
 function chordCheck(onset){
   const act=[...down,...sust];
   if(act.length<3){if(hold&&hold.until===Infinity)hold.until=barEnd();return;}
   if(!anyOn())return;
-  const root=Math.min(...act)%12,H=harmNow(ac.currentTime),rel=(root-H.k+12)%12,sc=SC[mode];
+  const root=chordRoot(act),H=harmNow(ac.currentTime),rel=(root-H.k+12)%12,sc=SC[mode];
   let d=sc.indexOf(rel);
   if(d<0){let bd=99;sc.forEach((v,i)=>{const dd=Math.min((rel-v+12)%12,(v-rel+12)%12);if(dd<bd){bd=dd;d=i;}});}
   const changed=!hold||hold.deg!==d;
