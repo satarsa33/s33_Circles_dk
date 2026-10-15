@@ -115,7 +115,21 @@ const FILLS=[
  [[[0,105]],[],[[7,90]],[],[[7,85]],[[7,100]],[[4,100]],[[6,112],[0,100]]],
  [[[2,60]],[[2,70]],[[2,80],[1,70]],[[2,90]],[[3,95]],[[3,100]],[[5,100]],[[6,112]]]
 ];
-const BP=[{name:'Lungo'},{name:'Impulso',l:{k:3,n:8,r:0}},{name:'Sincope',l:{k:5,n:16,r:2}},{name:'Ostinato',l:{k:5,n:8,r:0}},{name:'Kick'}];
+const BP=[
+ {name:'Lungo'},
+ {name:'Impulso',l:{k:3,n:8,r:0}},
+ {name:'Sincope',l:{k:5,n:16,r:2}},
+ {name:'Ostinato',l:{k:5,n:8,r:0},m:[0,7,0,4]},
+ {name:'Kick'},
+ {name:'Quarti',l:{k:4,n:16,r:0},m:[0]},
+ {name:'Pompa',l:{k:8,n:16,r:0},m:[0,0,7,0]},
+ {name:'Walking',l:{k:8,n:16,r:0},m:[0,2,4,5,4,2,0,-1]},
+ {name:'Dub',l:{k:3,n:8,r:5},m:[0,0,4]},
+ {name:'Funk',l:{k:7,n:16,r:2},m:[0,0,7,4,0,2]},
+ {name:'Arpeggio',l:{k:8,n:16,r:0},m:[0,2,4,7,4,2]},
+ {name:'Deriva',l:{k:5,n:13,r:0},m:[0,4,0,7]},
+ {name:'Mezzo',l:{k:2,n:16,r:0},m:[0,4]}
+];
 const C=[
  {role:'',pre:1,div:4,ratio:1},
  {role:'Basso',dl:2,bp:0,bi:0,tm:0,ratio:.5},
@@ -500,7 +514,7 @@ function play(i,t,p,fo){
     let r=Math.random()<.75?ch:ch+4;if(r>=5)r-=7;
     let bd=Math.min(p*1.8,3.5),at=.08;
     if(c.bp){const rr=ch>=5?ch-7:ch;at=.01;bd=Math.min(p*1.6,1.4);
-      r=c.bp===3?rr+[0,7,0,4][c.bi++%4]:rr+(Math.random()<.2?4:0);}
+      {const m=BP[c.bp].m;r=rr+(m?m[c.bi++%m.length]:(Math.random()<.2?4:0));}}
     if(fo!==undefined)r=fo;
     const bf=fq(r,36),tm=c.tm;recN(1,t,mn(bf),bd,c.bp?100:85);
     bassVoice(bf,t,at,bd,tm);
